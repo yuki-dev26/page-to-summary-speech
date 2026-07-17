@@ -404,36 +404,43 @@ function clearAudio({ keepBadge = false } = {}) {
   }
 }
 
-function bindAudioEvents() {
-  audio.addEventListener("loadedmetadata", () => {
-    els.seek.max = String(audio.duration || 0);
-    els.duration.textContent = formatTime(audio.duration);
+function bindAudioEvents(instance) {
+  const isActive = () => audio === instance;
+
+  instance.addEventListener("loadedmetadata", () => {
+    if (!isActive()) return;
+    els.seek.max = String(instance.duration || 0);
+    els.duration.textContent = formatTime(instance.duration);
   });
 
-  audio.addEventListener("timeupdate", () => {
-    if (seeking) return;
-    els.seek.value = String(audio.currentTime || 0);
-    els.currentTime.textContent = formatTime(audio.currentTime);
+  instance.addEventListener("timeupdate", () => {
+    if (!isActive() || seeking) return;
+    els.seek.value = String(instance.currentTime || 0);
+    els.currentTime.textContent = formatTime(instance.currentTime);
   });
 
-  audio.addEventListener("play", () => {
+  instance.addEventListener("play", () => {
+    if (!isActive()) return;
     setPlayIcon(true);
     setPlayerBadge("badgePlaying", "ready");
   });
 
-  audio.addEventListener("pause", () => {
+  instance.addEventListener("pause", () => {
+    if (!isActive()) return;
     setPlayIcon(false);
-    if (!audio.ended) setPlayerBadge("badgePaused", "paused");
+    if (!instance.ended) setPlayerBadge("badgePaused", "paused");
   });
 
-  audio.addEventListener("ended", () => {
+  instance.addEventListener("ended", () => {
+    if (!isActive()) return;
     setPlayIcon(false);
     els.seek.value = els.seek.max;
     els.currentTime.textContent = els.duration.textContent;
     setPlayerBadge("badgeEnded", "ready");
   });
 
-  audio.addEventListener("error", () => {
+  instance.addEventListener("error", () => {
+    if (!isActive()) return;
     setPlayerBadge("badgePlaybackError", "error");
     setStatus("errPlayback", { error: true });
   });
@@ -444,7 +451,7 @@ function enablePlayer(blob) {
   objectUrl = URL.createObjectURL(blob);
   audio = new Audio(objectUrl);
   audio.playbackRate = Number(els.speed.value) || 1;
-  bindAudioEvents();
+  bindAudioEvents(audio);
 
   els.playPause.disabled = false;
   els.seek.disabled = false;
