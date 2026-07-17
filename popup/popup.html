@@ -32,7 +32,7 @@
       <section class="panel glass-card">
         <label class="field">
           <span class="field-label" data-i18n="language">言語</span>
-          <span class="select-wrap">
+          <span class="select-wrap" data-custom-select>
             <select id="locale">
               <option value="ja">日本語</option>
               <option value="en">English</option>
@@ -44,8 +44,40 @@
           </span>
         </label>
 
-        <label class="field">
-          <span class="field-label" data-i18n="apiKey">OpenAI API キー</span>
+        <div class="field">
+          <div class="field-label-inline">
+            <label class="field-label" for="apiKey" data-i18n="apiKey"
+              >OpenAI API キー</label
+            >
+            <a
+              class="label-link"
+              href="https://platform.openai.com/api-keys"
+              target="_blank"
+              rel="noopener noreferrer"
+              data-i18n-aria-label="openApiKeys"
+              data-i18n-title="openApiKeys"
+              aria-label="APIキーを取得"
+              title="APIキーを取得"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                width="14"
+                height="14"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.9"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M14 4h6v6" />
+                <path d="M10 14L20 4" />
+                <path
+                  d="M20 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1h5"
+                />
+              </svg>
+            </a>
+          </div>
           <div class="key-row">
             <input
               id="apiKey"
@@ -99,25 +131,25 @@
               </svg>
             </button>
           </div>
-        </label>
+        </div>
 
         <label class="field">
-          <span class="field-label" data-i18n="voice">音声</span>
-          <span class="select-wrap">
+          <span class="field-label" data-i18n="voice">話者</span>
+          <span class="select-wrap" data-custom-select>
             <select id="voice">
-              <option value="coral">coral</option>
-              <option value="marin">marin</option>
-              <option value="cedar">cedar</option>
-              <option value="nova">nova</option>
-              <option value="alloy">alloy</option>
-              <option value="ash">ash</option>
-              <option value="ballad">ballad</option>
-              <option value="echo">echo</option>
-              <option value="fable">fable</option>
-              <option value="onyx">onyx</option>
-              <option value="sage">sage</option>
-              <option value="shimmer">shimmer</option>
-              <option value="verse">verse</option>
+              <option value="coral">Coral</option>
+              <option value="marin">Marin</option>
+              <option value="cedar">Cedar</option>
+              <option value="nova">Nova</option>
+              <option value="alloy">Alloy</option>
+              <option value="ash">Ash</option>
+              <option value="ballad">Ballad</option>
+              <option value="echo">Echo</option>
+              <option value="fable">Fable</option>
+              <option value="onyx">Onyx</option>
+              <option value="sage">Sage</option>
+              <option value="shimmer">Shimmer</option>
+              <option value="verse">Verse</option>
             </select>
             <span class="chevron" aria-hidden="true"></span>
           </span>
@@ -177,7 +209,7 @@
       <section class="summary-panel glass-card">
         <details id="summaryDetails" class="summary-details">
           <summary class="summary-toggle">
-            <span data-i18n="summary">要約</span>
+            <span data-i18n="summary">要約結果</span>
             <span class="chevron" aria-hidden="true"></span>
           </summary>
           <p id="summary" class="summary empty" data-i18n-empty="summaryEmpty">
@@ -202,6 +234,7 @@
             type="button"
             class="play-btn"
             disabled
+            data-icon="play"
             data-i18n-aria-label="play"
             aria-label="再生"
           >
@@ -226,7 +259,7 @@
 
           <label class="speed-field">
             <span class="field-label" data-i18n="speed">速度</span>
-            <span class="select-wrap">
+            <span class="select-wrap" data-custom-select>
               <select id="speed">
                 <option value="0.75">0.75x</option>
                 <option value="1" selected>1x</option>

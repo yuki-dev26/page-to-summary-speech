@@ -55,6 +55,229 @@ function formatTime(seconds) {
   return `${m}:${s}`;
 }
 
+const customSelectBySelect = new Map();
+const customSelectByWrap = new Map();
+
+function getSelectedOptionLabel(select) {
+  const option = select.selectedOptions[0];
+  return option ? option.textContent.trim() : "";
+}
+
+function syncCustomSelect(select) {
+  const controller = customSelectBySelect.get(select);
+  if (!controller) return;
+  controller.valueEl.textContent = getSelectedOptionLabel(select);
+  for (const btn of controller.menu.querySelectorAll(".custom-select-option")) {
+    btn.setAttribute(
+      "aria-selected",
+      String(btn.dataset.value === select.value),
+    );
+  }
+}
+
+function positionCustomSelectMenu(wrap) {
+  const controller = customSelectByWrap.get(wrap);
+  const trigger = controller?.trigger;
+  const menu = controller?.menu;
+  if (!trigger || !menu || menu.hidden) return;
+
+  const rect = trigger.getBoundingClientRect();
+  const gap = 6;
+  const maxHeight = Math.min(220, window.innerHeight - 24);
+  const spaceBelow = window.innerHeight - rect.bottom - gap - 12;
+  const spaceAbove = rect.top - gap - 12;
+  const openUp = spaceBelow < 120 && spaceAbove > spaceBelow;
+  const height = Math.min(maxHeight, openUp ? spaceAbove : spaceBelow);
+
+  menu.style.width = `${rect.width}px`;
+  menu.style.left = `${rect.left}px`;
+  menu.style.maxHeight = `${Math.max(96, height)}px`;
+
+  if (openUp) {
+    menu.style.top = "auto";
+    menu.style.bottom = `${window.innerHeight - rect.top + gap}px`;
+  } else {
+    menu.style.bottom = "auto";
+    menu.style.top = `${rect.bottom + gap}px`;
+  }
+}
+
+function closeCustomSelect(wrap) {
+  const controller = customSelectByWrap.get(wrap);
+  if (!controller) return;
+  const { menu, trigger } = controller;
+  menu.hidden = true;
+  wrap.classList.remove("is-open");
+  trigger.setAttribute("aria-expanded", "false");
+  menu.style.top = "";
+  menu.style.bottom = "";
+  menu.style.left = "";
+  menu.style.width = "";
+  menu.style.maxHeight = "";
+}
+
+function closeAllCustomSelects(exceptWrap = null) {
+  for (const wrap of document.querySelectorAll(
+    "[data-custom-select].is-open",
+  )) {
+    if (wrap !== exceptWrap) closeCustomSelect(wrap);
+  }
+}
+
+function enhanceCustomSelect(select) {
+  const wrap = select.closest("[data-custom-select]");
+  if (!wrap || customSelectBySelect.has(select)) return;
+
+  const trigger = document.createElement("button");
+  trigger.type = "button";
+  trigger.className = "custom-select-trigger";
+  trigger.setAttribute("aria-haspopup", "listbox");
+  trigger.setAttribute("aria-expanded", "false");
+
+  const valueEl = document.createElement("span");
+  valueEl.className = "custom-select-value";
+  valueEl.textContent = getSelectedOptionLabel(select);
+  trigger.append(valueEl);
+
+  const menu = document.createElement("ul");
+  menu.className = "custom-select-menu";
+  menu.setAttribute("role", "listbox");
+  menu.hidden = true;
+
+  for (const option of select.options) {
+    const item = document.createElement("li");
+    item.setAttribute("role", "presentation");
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "custom-select-option";
+    btn.setAttribute("role", "option");
+    btn.dataset.value = option.value;
+    btn.textContent = option.textContent.trim();
+    btn.setAttribute("aria-selected", String(option.value === select.value));
+    btn.addEventListener("click", () => {
+      if (select.value !== option.value) {
+        select.value = option.value;
+        select.dispatchEvent(new Event("change", { bubbles: true }));
+      }
+      syncCustomSelect(select);
+      closeCustomSelect(wrap);
+      trigger.focus();
+    });
+    item.append(btn);
+    menu.append(item);
+  }
+
+  trigger.addEventListener("click", (event) => {
+    event.preventDefault();
+    const willOpen = menu.hidden;
+    closeAllCustomSelects(wrap);
+    if (willOpen) {
+      menu.hidden = false;
+      wrap.classList.add("is-open");
+      trigger.setAttribute("aria-expanded", "true");
+      positionCustomSelectMenu(wrap);
+      const selected = menu.querySelector('[aria-selected="true"]');
+      selected?.focus();
+    } else {
+      closeCustomSelect(wrap);
+    }
+  });
+
+  trigger.addEventListener("keydown", (event) => {
+    if (
+      event.key === "ArrowDown" ||
+      event.key === "Enter" ||
+      event.key === " "
+    ) {
+      event.preventDefault();
+      if (menu.hidden) trigger.click();
+    }
+  });
+
+  menu.addEventListener("keydown", (event) => {
+    const options = [...menu.querySelectorAll(".custom-select-option")];
+    const index = options.indexOf(document.activeElement);
+    if (event.key === "Escape") {
+      event.preventDefault();
+      closeCustomSelect(wrap);
+      trigger.focus();
+      return;
+    }
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      options[Math.min(index + 1, options.length - 1)]?.focus();
+      return;
+    }
+    if (event.key === "ArrowUp") {
+      event.preventDefault();
+      options[Math.max(index - 1, 0)]?.focus();
+    }
+  });
+
+  wrap.insertBefore(trigger, select);
+  document.body.append(menu);
+
+  const controller = { wrap, trigger, valueEl, menu };
+  customSelectBySelect.set(select, controller);
+  customSelectByWrap.set(wrap, controller);
+
+  const descriptor = Object.getOwnPropertyDescriptor(
+    HTMLSelectElement.prototype,
+    "value",
+  );
+  if (descriptor?.set && descriptor?.get) {
+    Object.defineProperty(select, "value", {
+      configurable: true,
+      enumerable: true,
+      get() {
+        return descriptor.get.call(this);
+      },
+      set(next) {
+        descriptor.set.call(this, next);
+        syncCustomSelect(this);
+      },
+    });
+  }
+}
+
+function initCustomSelects() {
+  for (const select of document.querySelectorAll(
+    "[data-custom-select] > select",
+  )) {
+    enhanceCustomSelect(select);
+  }
+
+  document.addEventListener("pointerdown", (event) => {
+    const wrap = event.target.closest("[data-custom-select]");
+    const menu = event.target.closest(".custom-select-menu");
+    if (!wrap && !menu) closeAllCustomSelects();
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") closeAllCustomSelects();
+  });
+
+  window.addEventListener("resize", () => {
+    for (const wrap of document.querySelectorAll(
+      "[data-custom-select].is-open",
+    )) {
+      positionCustomSelectMenu(wrap);
+    }
+  });
+
+  document.addEventListener(
+    "scroll",
+    () => {
+      for (const wrap of document.querySelectorAll(
+        "[data-custom-select].is-open",
+      )) {
+        positionCustomSelectMenu(wrap);
+      }
+    },
+    true,
+  );
+}
+
 function showProgress() {
   els.progressPanel.hidden = false;
 }
@@ -82,9 +305,34 @@ function setStatus(
   }
 }
 
+const STEP_DONE_KEYS = {
+  extract: "stepExtractDone",
+  summarize: "stepSummarizeDone",
+  speech: "stepSpeechDone",
+};
+
+function updateStepLabel(step) {
+  const label = step.querySelector(".step-label");
+  if (!label) return;
+  if (step.classList.contains("done")) {
+    const doneKey = STEP_DONE_KEYS[step.dataset.step];
+    label.textContent = t(doneKey || "statusDone");
+    return;
+  }
+  const key = label.getAttribute("data-i18n");
+  if (key) label.textContent = t(key);
+}
+
+function refreshStepLabels() {
+  for (const step of els.steps.querySelectorAll(".step")) {
+    updateStepLabel(step);
+  }
+}
+
 function resetSteps() {
   for (const step of els.steps.querySelectorAll(".step")) {
     step.classList.remove("active", "done", "error");
+    updateStepLabel(step);
   }
 }
 
@@ -93,6 +341,7 @@ function setStep(stepId, state) {
   if (!step) return;
   step.classList.remove("active", "done", "error");
   if (state) step.classList.add(state);
+  updateStepLabel(step);
 }
 
 function setSummary(text) {
@@ -113,6 +362,12 @@ function setPlayerBadge(key, kind = "") {
   els.playerBadge.className = "player-badge" + (kind ? ` ${kind}` : "");
 }
 
+function setPlayIcon(playing) {
+  els.playPause.dataset.icon = playing ? "pause" : "play";
+  els.playPause.textContent = playing ? "❚❚" : "▶";
+  els.playPause.setAttribute("aria-label", t(playing ? "pause" : "play"));
+}
+
 function clearAudio({ keepBadge = false } = {}) {
   if (audio) {
     audio.pause();
@@ -124,8 +379,7 @@ function clearAudio({ keepBadge = false } = {}) {
     URL.revokeObjectURL(objectUrl);
     objectUrl = null;
   }
-  els.playPause.textContent = "▶";
-  els.playPause.setAttribute("aria-label", t("play"));
+  setPlayIcon(false);
   els.playPause.disabled = true;
   els.seek.value = "0";
   els.seek.max = "0";
@@ -151,20 +405,17 @@ function bindAudioEvents() {
   });
 
   audio.addEventListener("play", () => {
-    els.playPause.textContent = "❚❚";
-    els.playPause.setAttribute("aria-label", t("pause"));
+    setPlayIcon(true);
     setPlayerBadge("badgePlaying", "ready");
   });
 
   audio.addEventListener("pause", () => {
-    els.playPause.textContent = "▶";
-    els.playPause.setAttribute("aria-label", t("play"));
-    if (!audio.ended) setPlayerBadge("badgePaused", "ready");
+    setPlayIcon(false);
+    if (!audio.ended) setPlayerBadge("badgePaused", "paused");
   });
 
   audio.addEventListener("ended", () => {
-    els.playPause.textContent = "▶";
-    els.playPause.setAttribute("aria-label", t("play"));
+    setPlayIcon(false);
     els.seek.value = els.seek.max;
     els.currentTime.textContent = els.duration.textContent;
     setPlayerBadge("badgeEnded", "ready");
@@ -191,8 +442,22 @@ function enablePlayer(blob) {
 
 function autosizePrompt() {
   const el = els.prompt;
-  el.style.height = "auto";
+  if (CSS.supports?.("field-sizing", "content")) {
+    el.style.removeProperty("height");
+    return;
+  }
+  el.style.height = "0px";
   el.style.height = `${el.scrollHeight}px`;
+}
+
+function scheduleAutosizePrompt() {
+  requestAnimationFrame(() => {
+    autosizePrompt();
+    requestAnimationFrame(autosizePrompt);
+  });
+  if (document.fonts?.ready) {
+    void document.fonts.ready.then(autosizePrompt);
+  }
 }
 
 let saveTimer = null;
@@ -209,6 +474,7 @@ function collectSettings() {
 
 function refreshDynamicI18n() {
   applyI18n();
+  refreshStepLabels();
   setPlayerBadge(badgeKey, badgeKind);
   if (!currentSummary) {
     els.summary.textContent = t("summaryEmpty");
@@ -271,7 +537,7 @@ async function loadSettings() {
       : getDefaultPrompt();
 
   refreshDynamicI18n();
-  autosizePrompt();
+  scheduleAutosizePrompt();
 }
 
 async function saveSettings() {
@@ -407,7 +673,7 @@ async function run() {
     const blob = await synthesizeSpeech(apiKey, summary, els.voice.value);
     setStep("speech", "done");
     enablePlayer(blob);
-    setStatus("statusDone", { done: true });
+    setStatus("");
     await audio.play();
   } catch (error) {
     console.error(error);
@@ -497,4 +763,16 @@ window.addEventListener("pagehide", () => {
 });
 
 clearAudio();
+initCustomSelects();
 void loadSettings();
+
+if (typeof ResizeObserver !== "undefined") {
+  let lastPromptWidth = 0;
+  const promptResizeObserver = new ResizeObserver((entries) => {
+    const width = entries[0]?.contentRect?.width ?? 0;
+    if (Math.abs(width - lastPromptWidth) < 0.5) return;
+    lastPromptWidth = width;
+    autosizePrompt();
+  });
+  promptResizeObserver.observe(els.prompt);
+}
