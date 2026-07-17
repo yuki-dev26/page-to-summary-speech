@@ -27,7 +27,8 @@ const THEME_KEY_LOCAL = "ptsTheme";
 
 const els = {
   locale: document.getElementById("locale"),
-  themeToggle: document.getElementById("themeToggle"),
+  themeLight: document.getElementById("themeLight"),
+  themeDark: document.getElementById("themeDark"),
   apiKey: document.getElementById("apiKey"),
   toggleKey: document.getElementById("toggleKey"),
   model: document.getElementById("model"),
@@ -485,13 +486,9 @@ function applyTheme(theme) {
 }
 
 function syncThemeToggle() {
-  if (!els.themeToggle) return;
   const dark = getTheme() === "dark";
-  const labelKey = dark ? "themeToLight" : "themeToDark";
-  els.themeToggle.setAttribute("aria-pressed", String(dark));
-  els.themeToggle.setAttribute("aria-label", t(labelKey));
-  els.themeToggle.title = t(labelKey);
-  els.themeToggle.setAttribute("data-i18n-aria-label", labelKey);
+  els.themeLight?.setAttribute("aria-pressed", String(!dark));
+  els.themeDark?.setAttribute("aria-pressed", String(dark));
 }
 
 function collectSettings() {
@@ -754,8 +751,12 @@ async function togglePlayPause() {
 
 els.locale.addEventListener("change", () => void onLocaleChange());
 
-els.themeToggle.addEventListener("click", () => {
-  applyTheme(getTheme() === "dark" ? "light" : "dark");
+els.themeLight.addEventListener("click", () => {
+  applyTheme("light");
+  void flushSettings();
+});
+els.themeDark.addEventListener("click", () => {
+  applyTheme("dark");
   void flushSettings();
 });
 
