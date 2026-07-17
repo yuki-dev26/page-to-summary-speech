@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Page to Summary Speech</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <div class="ambient" aria-hidden="true">
+      <span class="orb orb-a"></span>
+      <span class="orb orb-b"></span>
+      <span class="orb orb-c"></span>
+      <span class="shine"></span>
+    </div>
+
+    <div class="shell">
+      <header class="brand glass-card brand-card">
+        <div class="brand-row">
+          <div class="brand-glyph" aria-hidden="true">
+            <span class="glyph-wave"></span>
+          </div>
+          <div>
+            <p class="brand-mark">Page to Summary Speech</p>
+            <p class="brand-sub">ページを要約して読み上げ</p>
+          </div>
+        </div>
+      </header>
+
+      <section class="panel glass-card">
+        <label class="field">
+          <span class="field-label">OpenAI API キー</span>
+          <div class="key-row">
+            <input
+              id="apiKey"
+              type="password"
+              autocomplete="off"
+              spellcheck="false"
+              placeholder="sk-..."
+            />
+            <button
+              id="toggleKey"
+              type="button"
+              class="ghost"
+              aria-label="キーを表示"
+            >
+              表示
+            </button>
+          </div>
+        </label>
+
+        <label class="field">
+          <span class="field-label">音声</span>
+          <select id="voice">
+            <option value="coral">coral</option>
+            <option value="marin">marin</option>
+            <option value="cedar">cedar</option>
+            <option value="nova">nova</option>
+            <option value="alloy">alloy</option>
+            <option value="ash">ash</option>
+            <option value="ballad">ballad</option>
+            <option value="echo">echo</option>
+            <option value="fable">fable</option>
+            <option value="onyx">onyx</option>
+            <option value="sage">sage</option>
+            <option value="shimmer">shimmer</option>
+            <option value="verse">verse</option>
+          </select>
+        </label>
+
+        <div class="field">
+          <div class="field-label-row">
+            <label class="field-label" for="prompt">要約プロンプト</label>
+            <button id="resetPrompt" type="button" class="linkish">
+              初期値に戻す
+            </button>
+          </div>
+          <textarea
+            id="prompt"
+            rows="1"
+            spellcheck="false"
+            placeholder="要約の指示を入力"
+          ></textarea>
+        </div>
+
+        <button id="run" type="button" class="primary">要約して読み上げ</button>
+      </section>
+
+      <section class="progress-panel glass-card" id="progressPanel" hidden>
+        <ol class="steps" id="steps" aria-live="polite">
+          <li class="step" data-step="extract">
+            <span class="step-dot"></span>
+            <span class="step-label">本文を抽出中</span>
+          </li>
+          <li class="step" data-step="summarize">
+            <span class="step-dot"></span>
+            <span class="step-label">回答を生成中</span>
+          </li>
+          <li class="step" data-step="speech">
+            <span class="step-dot"></span>
+            <span class="step-label">音声を生成中</span>
+          </li>
+        </ol>
+        <div id="status" class="status" hidden>
+          <span class="status-icon" aria-hidden="true"></span>
+          <span id="statusText" class="status-text"></span>
+        </div>
+      </section>
+
+      <section class="summary-panel glass-card">
+        <details id="summaryDetails" class="summary-details">
+          <summary class="summary-toggle">
+            <span>要約</span>
+            <span class="summary-chevron" aria-hidden="true"></span>
+          </summary>
+          <p id="summary" class="summary empty">まだありません</p>
+        </details>
+      </section>
+
+      <section class="player-panel glass-card" id="playerPanel">
+        <div class="player-header">
+          <h2>読み上げ</h2>
+          <span id="playerBadge" class="player-badge">待機中</span>
+        </div>
+
+        <div
+          class="player glass-inset"
+          id="playerControls"
+          aria-disabled="true"
+        >
+          <button
+            id="playPause"
+            type="button"
+            class="play-btn"
+            disabled
+            aria-label="再生"
+          >
+            ▶
+          </button>
+
+          <div class="timeline">
+            <input
+              id="seek"
+              type="range"
+              min="0"
+              max="0"
+              value="0"
+              step="0.1"
+              disabled
+            />
+            <div class="time-row">
+              <span id="currentTime">0:00</span>
+              <span id="duration">0:00</span>
+            </div>
+          </div>
+
+          <label class="speed-field">
+            <span class="field-label">速度</span>
+            <select id="speed" disabled>
+              <option value="0.75">0.75x</option>
+              <option value="1" selected>1x</option>
+              <option value="1.25">1.25x</option>
+              <option value="1.5">1.5x</option>
+              <option value="1.75">1.75x</option>
+              <option value="2">2x</option>
+            </select>
+          </label>
+        </div>
+      </section>
+    </div>
+
+    <script type="module" src="popup.js"></script>
+  </body>
+</html>
