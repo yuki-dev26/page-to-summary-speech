@@ -1,4 +1,9 @@
-import { summarizePage, synthesizeSpeech } from "../lib/openai.js";
+import {
+  DEFAULT_SUMMARY_MODEL,
+  normalizeSummaryModel,
+  summarizePage,
+  synthesizeSpeech,
+} from "../lib/openai.js";
 import {
   DEFAULT_LOCALE,
   applyI18n,
@@ -10,16 +15,22 @@ import {
 
 const STORAGE_KEYS = {
   locale: "uiLocale",
+  theme: "uiTheme",
   apiKey: "openaiApiKey",
+  model: "summaryModel",
   voice: "ttsVoice",
   prompt: "summaryPrompt",
   speed: "playbackSpeed",
 };
 
+const THEME_KEY_LOCAL = "ptsTheme";
+
 const els = {
   locale: document.getElementById("locale"),
+  themeToggle: document.getElementById("themeToggle"),
   apiKey: document.getElementById("apiKey"),
   toggleKey: document.getElementById("toggleKey"),
+  model: document.getElementById("model"),
   voice: document.getElementById("voice"),
   prompt: document.getElementById("prompt"),
   resetPrompt: document.getElementById("resetPrompt"),
@@ -462,10 +473,33 @@ function scheduleAutosizePrompt() {
 
 let saveTimer = null;
 
+function getTheme() {
+  return document.documentElement.dataset.theme === "dark" ? "dark" : "light";
+}
+
+function applyTheme(theme) {
+  const next = theme === "dark" ? "dark" : "light";
+  document.documentElement.dataset.theme = next;
+  localStorage.setItem(THEME_KEY_LOCAL, next);
+  syncThemeToggle();
+}
+
+function syncThemeToggle() {
+  if (!els.themeToggle) return;
+  const dark = getTheme() === "dark";
+  const labelKey = dark ? "themeToLight" : "themeToDark";
+  els.themeToggle.setAttribute("aria-pressed", String(dark));
+  els.themeToggle.setAttribute("aria-label", t(labelKey));
+  els.themeToggle.title = t(labelKey);
+  els.themeToggle.setAttribute("data-i18n-aria-label", labelKey);
+}
+
 function collectSettings() {
   return {
     [STORAGE_KEYS.locale]: els.locale.value || DEFAULT_LOCALE,
+    [STORAGE_KEYS.theme]: getTheme(),
     [STORAGE_KEYS.apiKey]: els.apiKey.value.trim(),
+    [STORAGE_KEYS.model]: normalizeSummaryModel(els.model.value),
     [STORAGE_KEYS.voice]: els.voice.value,
     [STORAGE_KEYS.prompt]: els.prompt.value.trim() || getDefaultPrompt(),
     [STORAGE_KEYS.speed]: els.speed.value,
@@ -474,6 +508,7 @@ function collectSettings() {
 
 function refreshDynamicI18n() {
   applyI18n();
+  syncThemeToggle();
   refreshStepLabels();
   setPlayerBadge(badgeKey, badgeKind);
   if (!currentSummary) {
@@ -511,7 +546,9 @@ function refreshDynamicI18n() {
 async function loadSettings() {
   const stored = await chrome.storage.local.get([
     STORAGE_KEYS.locale,
+    STORAGE_KEYS.theme,
     STORAGE_KEYS.apiKey,
+    STORAGE_KEYS.model,
     STORAGE_KEYS.voice,
     STORAGE_KEYS.prompt,
     STORAGE_KEYS.speed,
@@ -519,10 +556,16 @@ async function loadSettings() {
 
   const locale = setLocale(stored[STORAGE_KEYS.locale] || DEFAULT_LOCALE);
   els.locale.value = locale;
+  applyTheme(
+    stored[STORAGE_KEYS.theme] || localStorage.getItem(THEME_KEY_LOCAL),
+  );
 
   if (typeof stored[STORAGE_KEYS.apiKey] === "string") {
     els.apiKey.value = stored[STORAGE_KEYS.apiKey];
   }
+  els.model.value = normalizeSummaryModel(
+    stored[STORAGE_KEYS.model] || DEFAULT_SUMMARY_MODEL,
+  );
   if (stored[STORAGE_KEYS.voice]) {
     els.voice.value = stored[STORAGE_KEYS.voice];
   }
@@ -663,7 +706,12 @@ async function run() {
     setStep("summarize", "active");
     setPlayerBadge("badgeSummarizing", "busy");
 
-    const summary = await summarizePage(apiKey, page, els.prompt.value);
+    const summary = await summarizePage(
+      apiKey,
+      page,
+      els.prompt.value,
+      els.model.value,
+    );
     setSummary(summary);
 
     setStep("summarize", "done");
@@ -706,6 +754,11 @@ async function togglePlayPause() {
 
 els.locale.addEventListener("change", () => void onLocaleChange());
 
+els.themeToggle.addEventListener("click", () => {
+  applyTheme(getTheme() === "dark" ? "light" : "dark");
+  void flushSettings();
+});
+
 els.toggleKey.addEventListener("click", () => {
   const nextVisible = els.apiKey.type !== "text";
   els.apiKey.type = nextVisible ? "text" : "password";
@@ -725,6 +778,7 @@ els.resetPrompt.addEventListener("click", async () => {
 
 els.apiKey.addEventListener("input", scheduleSaveSettings);
 els.apiKey.addEventListener("change", () => void flushSettings());
+els.model.addEventListener("change", () => void flushSettings());
 els.voice.addEventListener("change", () => void flushSettings());
 els.prompt.addEventListener("input", () => {
   autosizePrompt();
