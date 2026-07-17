@@ -1,10 +1,15 @@
+import { summarizePage, synthesizeSpeech } from "../lib/openai.js";
 import {
-  DEFAULT_SUMMARY_PROMPT,
-  summarizePage,
-  synthesizeSpeech,
-} from "../lib/openai.js";
+  DEFAULT_LOCALE,
+  applyI18n,
+  getDefaultPrompt,
+  isDefaultPrompt,
+  setLocale,
+  t,
+} from "../lib/i18n.js";
 
 const STORAGE_KEYS = {
+  locale: "uiLocale",
   apiKey: "openaiApiKey",
   voice: "ttsVoice",
   prompt: "summaryPrompt",
@@ -12,6 +17,7 @@ const STORAGE_KEYS = {
 };
 
 const els = {
+  locale: document.getElementById("locale"),
   apiKey: document.getElementById("apiKey"),
   toggleKey: document.getElementById("toggleKey"),
   voice: document.getElementById("voice"),
@@ -37,6 +43,9 @@ let objectUrl = null;
 let currentSummary = "";
 let running = false;
 let seeking = false;
+let badgeKey = "badgeIdle";
+let badgeKind = "";
+let statusState = { key: "", message: "", error: false, done: false };
 
 function formatTime(seconds) {
   if (!Number.isFinite(seconds) || seconds < 0) return "0:00";
@@ -50,10 +59,20 @@ function showProgress() {
   els.progressPanel.hidden = false;
 }
 
-function setStatus(message, { error = false, done = false } = {}) {
+function setStatus(
+  messageOrKey,
+  { error = false, done = false, raw = false } = {},
+) {
   showProgress();
+  const message = raw || !messageOrKey ? messageOrKey : t(messageOrKey);
+  statusState = {
+    key: raw ? "" : messageOrKey || "",
+    message: message || "",
+    error,
+    done,
+  };
   els.status.hidden = !message;
-  els.statusText.textContent = message;
+  els.statusText.textContent = message || "";
   els.status.classList.toggle("error", error);
   els.status.classList.toggle("done", done && !error);
   if (message) {
@@ -79,7 +98,7 @@ function setStep(stepId, state) {
 function setSummary(text) {
   currentSummary = text || "";
   if (!text) {
-    els.summary.textContent = "まだありません";
+    els.summary.textContent = t("summaryEmpty");
     els.summary.classList.add("empty");
     return;
   }
@@ -87,8 +106,10 @@ function setSummary(text) {
   els.summary.classList.remove("empty");
 }
 
-function setPlayerBadge(text, kind = "") {
-  els.playerBadge.textContent = text;
+function setPlayerBadge(key, kind = "") {
+  badgeKey = key;
+  badgeKind = kind;
+  els.playerBadge.textContent = t(key);
   els.playerBadge.className = "player-badge" + (kind ? ` ${kind}` : "");
 }
 
@@ -104,17 +125,16 @@ function clearAudio({ keepBadge = false } = {}) {
     objectUrl = null;
   }
   els.playPause.textContent = "▶";
-  els.playPause.setAttribute("aria-label", "再生");
+  els.playPause.setAttribute("aria-label", t("play"));
   els.playPause.disabled = true;
   els.seek.value = "0";
   els.seek.max = "0";
   els.seek.disabled = true;
-  els.speed.disabled = true;
   els.currentTime.textContent = "0:00";
   els.duration.textContent = "0:00";
   els.playerControls.setAttribute("aria-disabled", "true");
   if (!keepBadge) {
-    setPlayerBadge(currentSummary ? "準備中" : "待機中");
+    setPlayerBadge(currentSummary ? "badgeReady" : "badgeIdle");
   }
 }
 
@@ -132,27 +152,27 @@ function bindAudioEvents() {
 
   audio.addEventListener("play", () => {
     els.playPause.textContent = "❚❚";
-    els.playPause.setAttribute("aria-label", "一時停止");
-    setPlayerBadge("再生中", "ready");
+    els.playPause.setAttribute("aria-label", t("pause"));
+    setPlayerBadge("badgePlaying", "ready");
   });
 
   audio.addEventListener("pause", () => {
     els.playPause.textContent = "▶";
-    els.playPause.setAttribute("aria-label", "再生");
-    if (!audio.ended) setPlayerBadge("一時停止", "ready");
+    els.playPause.setAttribute("aria-label", t("play"));
+    if (!audio.ended) setPlayerBadge("badgePaused", "ready");
   });
 
   audio.addEventListener("ended", () => {
     els.playPause.textContent = "▶";
-    els.playPause.setAttribute("aria-label", "再生");
+    els.playPause.setAttribute("aria-label", t("play"));
     els.seek.value = els.seek.max;
     els.currentTime.textContent = els.duration.textContent;
-    setPlayerBadge("再生完了", "ready");
+    setPlayerBadge("badgeEnded", "ready");
   });
 
   audio.addEventListener("error", () => {
-    setPlayerBadge("再生エラー", "error");
-    setStatus("音声の再生に失敗しました。", { error: true });
+    setPlayerBadge("badgePlaybackError", "error");
+    setStatus("errPlayback", { error: true });
   });
 }
 
@@ -165,9 +185,8 @@ function enablePlayer(blob) {
 
   els.playPause.disabled = false;
   els.seek.disabled = false;
-  els.speed.disabled = false;
   els.playerControls.setAttribute("aria-disabled", "false");
-  setPlayerBadge("再生できます", "ready");
+  setPlayerBadge("badgePlayable", "ready");
 }
 
 function autosizePrompt() {
@@ -176,39 +195,128 @@ function autosizePrompt() {
   el.style.height = `${el.scrollHeight}px`;
 }
 
+let saveTimer = null;
+
+function collectSettings() {
+  return {
+    [STORAGE_KEYS.locale]: els.locale.value || DEFAULT_LOCALE,
+    [STORAGE_KEYS.apiKey]: els.apiKey.value.trim(),
+    [STORAGE_KEYS.voice]: els.voice.value,
+    [STORAGE_KEYS.prompt]: els.prompt.value.trim() || getDefaultPrompt(),
+    [STORAGE_KEYS.speed]: els.speed.value,
+  };
+}
+
+function refreshDynamicI18n() {
+  applyI18n();
+  setPlayerBadge(badgeKey, badgeKind);
+  if (!currentSummary) {
+    els.summary.textContent = t("summaryEmpty");
+    els.summary.classList.add("empty");
+  }
+  if (statusState.key) {
+    setStatus(statusState.key, {
+      error: statusState.error,
+      done: statusState.done,
+    });
+  } else if (statusState.message) {
+    setStatus(statusState.message, {
+      error: statusState.error,
+      done: statusState.done,
+      raw: true,
+    });
+  }
+  const keyVisible = els.apiKey.type === "text";
+  els.toggleKey.setAttribute(
+    "aria-label",
+    t(keyVisible ? "hideApiKey" : "showApiKey"),
+  );
+  els.toggleKey.title = t(keyVisible ? "hide" : "show");
+  if (audio) {
+    els.playPause.setAttribute(
+      "aria-label",
+      t(audio.paused ? "play" : "pause"),
+    );
+  } else {
+    els.playPause.setAttribute("aria-label", t("play"));
+  }
+}
+
 async function loadSettings() {
   const stored = await chrome.storage.local.get([
+    STORAGE_KEYS.locale,
     STORAGE_KEYS.apiKey,
     STORAGE_KEYS.voice,
     STORAGE_KEYS.prompt,
     STORAGE_KEYS.speed,
   ]);
-  if (stored[STORAGE_KEYS.apiKey]) {
+
+  const locale = setLocale(stored[STORAGE_KEYS.locale] || DEFAULT_LOCALE);
+  els.locale.value = locale;
+
+  if (typeof stored[STORAGE_KEYS.apiKey] === "string") {
     els.apiKey.value = stored[STORAGE_KEYS.apiKey];
   }
   if (stored[STORAGE_KEYS.voice]) {
     els.voice.value = stored[STORAGE_KEYS.voice];
   }
-  if (stored[STORAGE_KEYS.speed]) {
-    els.speed.value = stored[STORAGE_KEYS.speed];
+  if (stored[STORAGE_KEYS.speed] != null && stored[STORAGE_KEYS.speed] !== "") {
+    els.speed.value = String(stored[STORAGE_KEYS.speed]);
   }
-  els.prompt.value = stored[STORAGE_KEYS.prompt] || DEFAULT_SUMMARY_PROMPT;
+
+  const storedPrompt = stored[STORAGE_KEYS.prompt];
+  els.prompt.value =
+    typeof storedPrompt === "string" && storedPrompt.trim()
+      ? storedPrompt
+      : getDefaultPrompt();
+
+  refreshDynamicI18n();
   autosizePrompt();
 }
 
 async function saveSettings() {
-  await chrome.storage.local.set({
-    [STORAGE_KEYS.apiKey]: els.apiKey.value.trim(),
-    [STORAGE_KEYS.voice]: els.voice.value,
-    [STORAGE_KEYS.prompt]: els.prompt.value.trim() || DEFAULT_SUMMARY_PROMPT,
-    [STORAGE_KEYS.speed]: els.speed.value,
-  });
+  if (saveTimer) {
+    clearTimeout(saveTimer);
+    saveTimer = null;
+  }
+  await chrome.storage.local.set(collectSettings());
+}
+
+function scheduleSaveSettings() {
+  if (saveTimer) clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => {
+    saveTimer = null;
+    void saveSettings();
+  }, 250);
+}
+
+async function flushSettings() {
+  if (saveTimer) {
+    clearTimeout(saveTimer);
+    saveTimer = null;
+  }
+  await saveSettings();
+}
+
+async function onLocaleChange() {
+  const previousPrompt = els.prompt.value.trim();
+  const shouldReplacePrompt = isDefaultPrompt(previousPrompt);
+  const locale = setLocale(els.locale.value);
+  els.locale.value = locale;
+
+  if (shouldReplacePrompt) {
+    els.prompt.value = getDefaultPrompt();
+    autosizePrompt();
+  }
+
+  refreshDynamicI18n();
+  await flushSettings();
 }
 
 function requireApiKey() {
   const apiKey = els.apiKey.value.trim();
   if (!apiKey) {
-    setStatus("OpenAI API キーを入力してください。", { error: true });
+    setStatus("errMissingApiKey", { error: true });
     throw new Error("missing api key");
   }
   return apiKey;
@@ -219,7 +327,6 @@ function isRestrictedUrl(url) {
 }
 
 async function getActiveTab() {
-  // サイドパネルからは lastFocusedWindow の方が安定する
   const tabs = await chrome.tabs.query({
     active: true,
     lastFocusedWindow: true,
@@ -232,14 +339,11 @@ async function getActiveTab() {
   }
 
   if (!tab?.id) {
-    throw new Error("アクティブなタブが見つかりません。");
+    throw new Error(t("errNoTab"));
   }
 
   if (isRestrictedUrl(tab.url)) {
-    throw new Error(
-      "いま表示中のタブはブラウザの内部ページです（拡張機能管理画面・新しいタブなど）。" +
-        "記事などの http/https のWebページを前面にしてから、もう一度実行してください。",
-    );
+    throw new Error(t("errRestrictedUrl"));
   }
 
   return tab;
@@ -257,9 +361,7 @@ async function extractFromTab(tabId) {
   });
 
   if (!result?.content || result.content.length < 40) {
-    throw new Error(
-      "本文を十分に抽出できませんでした。別のページで試してください。",
-    );
+    throw new Error(t("errExtract"));
   }
 
   return result;
@@ -280,7 +382,7 @@ async function run() {
   clearAudio();
   setSummary("");
   resetSteps();
-  setPlayerBadge("生成中", "busy");
+  setPlayerBadge("badgeBusy", "busy");
 
   try {
     await saveSettings();
@@ -293,19 +395,19 @@ async function run() {
 
     setStep("extract", "done");
     setStep("summarize", "active");
-    setPlayerBadge("回答生成中", "busy");
+    setPlayerBadge("badgeSummarizing", "busy");
 
     const summary = await summarizePage(apiKey, page, els.prompt.value);
     setSummary(summary);
 
     setStep("summarize", "done");
     setStep("speech", "active");
-    setPlayerBadge("音声生成中", "busy");
+    setPlayerBadge("badgeSpeaking", "busy");
 
     const blob = await synthesizeSpeech(apiKey, summary, els.voice.value);
     setStep("speech", "done");
     enablePlayer(blob);
-    setStatus("完了", { done: true });
+    setStatus("statusDone", { done: true });
     await audio.play();
   } catch (error) {
     console.error(error);
@@ -314,8 +416,8 @@ async function run() {
       active.classList.remove("active");
       active.classList.add("error");
     }
-    setStatus(error?.message || "処理に失敗しました。", { error: true });
-    setPlayerBadge("エラー", "error");
+    setStatus(error?.message || t("errGeneric"), { error: true, raw: true });
+    setPlayerBadge("badgeError", "error");
   } finally {
     running = false;
     els.run.disabled = false;
@@ -329,29 +431,40 @@ async function togglePlayPause() {
       await audio.play();
     } catch (error) {
       console.error(error);
-      setStatus("再生を開始できませんでした。", { error: true });
+      setStatus("errPlayStart", { error: true });
     }
   } else {
     audio.pause();
   }
 }
 
+els.locale.addEventListener("change", () => void onLocaleChange());
+
 els.toggleKey.addEventListener("click", () => {
-  const visible = els.apiKey.type === "text";
-  els.apiKey.type = visible ? "password" : "text";
-  els.toggleKey.textContent = visible ? "表示" : "隠す";
+  const nextVisible = els.apiKey.type !== "text";
+  els.apiKey.type = nextVisible ? "text" : "password";
+  els.toggleKey.setAttribute("aria-pressed", String(nextVisible));
+  els.toggleKey.setAttribute(
+    "aria-label",
+    t(nextVisible ? "hideApiKey" : "showApiKey"),
+  );
+  els.toggleKey.title = t(nextVisible ? "hide" : "show");
 });
 
 els.resetPrompt.addEventListener("click", async () => {
-  els.prompt.value = DEFAULT_SUMMARY_PROMPT;
+  els.prompt.value = getDefaultPrompt();
   autosizePrompt();
-  await saveSettings();
+  await flushSettings();
 });
 
-els.apiKey.addEventListener("change", saveSettings);
-els.voice.addEventListener("change", saveSettings);
-els.prompt.addEventListener("input", autosizePrompt);
-els.prompt.addEventListener("change", saveSettings);
+els.apiKey.addEventListener("input", scheduleSaveSettings);
+els.apiKey.addEventListener("change", () => void flushSettings());
+els.voice.addEventListener("change", () => void flushSettings());
+els.prompt.addEventListener("input", () => {
+  autosizePrompt();
+  scheduleSaveSettings();
+});
+els.prompt.addEventListener("change", () => void flushSettings());
 
 els.run.addEventListener("click", run);
 els.playPause.addEventListener("click", togglePlayPause);
@@ -371,8 +484,17 @@ els.seek.addEventListener("input", () => {
 
 els.speed.addEventListener("change", async () => {
   if (audio) audio.playbackRate = Number(els.speed.value) || 1;
-  await saveSettings();
+  await flushSettings();
+});
+
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "hidden") {
+    void flushSettings();
+  }
+});
+window.addEventListener("pagehide", () => {
+  void flushSettings();
 });
 
 clearAudio();
-loadSettings();
+void loadSettings();
