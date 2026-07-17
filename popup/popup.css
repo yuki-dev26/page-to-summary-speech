@@ -340,15 +340,13 @@ html[data-theme="dark"] .theme-option[aria-pressed="true"] {
   width: 44px;
   height: 44px;
   flex-shrink: 0;
-  border-radius: 14px;
+  border-radius: 50%;
   display: grid;
   place-items: center;
   overflow: hidden;
-  background: rgba(255, 255, 255, 0.7);
-  border: 1px solid rgba(255, 255, 255, 0.75);
-  box-shadow:
-    0 8px 18px rgba(0, 122, 255, 0.18),
-    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  background: transparent;
+  border: none;
+  box-shadow: none;
 }
 
 .brand-icon {
@@ -356,14 +354,7 @@ html[data-theme="dark"] .theme-option[aria-pressed="true"] {
   height: 100%;
   object-fit: cover;
   display: block;
-}
-
-html[data-theme="dark"] .brand-glyph {
-  background: rgba(20, 40, 70, 0.55);
-  border-color: rgba(255, 255, 255, 0.16);
-  box-shadow:
-    0 8px 18px rgba(0, 0, 0, 0.35),
-    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  border-radius: 50%;
 }
 
 html[data-theme="dark"] .orb {
@@ -490,8 +481,14 @@ html[data-theme="dark"] .orb {
 }
 
 .voice-row .icon-btn.is-busy {
-  opacity: 0.55;
   pointer-events: none;
+  color: var(--primary);
+  background: rgba(0, 122, 255, 0.12);
+  animation: previewPulse 1.2s ease-in-out infinite;
+}
+
+html[data-theme="dark"] .voice-row .icon-btn.is-busy {
+  background: rgba(77, 163, 255, 0.18);
 }
 
 input,
@@ -821,6 +818,33 @@ button:disabled {
 .icon-btn[aria-pressed="true"] .icon-eye-off,
 .icon-btn .icon-preview {
   display: block;
+}
+
+.icon-btn.is-busy .icon-preview {
+  display: none;
+}
+
+.icon-btn.is-busy .icon-preview-loading {
+  display: block;
+  animation: spin 0.75s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes previewPulse {
+  0%,
+  100% {
+    box-shadow: inset 0 1px 0 var(--glass-sheen);
+  }
+  50% {
+    box-shadow:
+      inset 0 1px 0 var(--glass-sheen),
+      0 0 0 3px rgba(0, 122, 255, 0.14);
+  }
 }
 
 .steps {

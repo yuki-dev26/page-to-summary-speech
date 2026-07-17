@@ -81,6 +81,7 @@ function setPreviewBusy(busy) {
   previewing = busy;
   els.previewVoice.classList.toggle("is-busy", busy);
   els.previewVoice.disabled = busy;
+  els.previewVoice.setAttribute("aria-busy", String(busy));
   const label = t(busy ? "previewVoiceBusy" : "previewVoice");
   els.previewVoice.setAttribute("aria-label", label);
   els.previewVoice.title = label;
@@ -100,15 +101,17 @@ async function previewSelectedVoice() {
   const sample = t("voicePreviewSample");
   const cacheKey = `${els.locale.value}:${voice}:${sample}`;
 
-  setPreviewBusy(true);
   stopVoicePreview();
 
   try {
     let blob = previewCache.get(cacheKey);
     if (!blob) {
+      setPreviewBusy(true);
       blob = await synthesizeSpeech(apiKey, sample, voice);
       previewCache.set(cacheKey, blob);
+      setPreviewBusy(false);
     }
+
     previewObjectUrl = URL.createObjectURL(blob);
     previewAudio = new Audio(previewObjectUrl);
     previewAudio.addEventListener("ended", () => {
@@ -118,7 +121,6 @@ async function previewSelectedVoice() {
   } catch (error) {
     console.error(error);
     setStatus(error?.message || t("errGeneric"), { error: true, raw: true });
-  } finally {
     setPreviewBusy(false);
   }
 }
