@@ -52,6 +52,7 @@ TTS は公式ドキュメント推奨の `gpt-4o-mini-tts` を使います。
 ```text
 manifest.json          # Manifest V3
 background.js          # サイドパネル起動
+icons/                 # 拡張アイコン (16/32/48/128)
 popup/                 # サイドパネル UI
 content/extract.js     # ページ本文抽出
 lib/openai.js          # OpenAI 要約 / TTS

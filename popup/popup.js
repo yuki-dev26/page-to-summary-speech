@@ -33,6 +33,7 @@ const els = {
   toggleKey: document.getElementById("toggleKey"),
   model: document.getElementById("model"),
   voice: document.getElementById("voice"),
+  previewVoice: document.getElementById("previewVoice"),
   prompt: document.getElementById("prompt"),
   resetPrompt: document.getElementById("resetPrompt"),
   run: document.getElementById("run"),
@@ -58,6 +59,69 @@ let seeking = false;
 let badgeKey = "badgeIdle";
 let badgeKind = "";
 let statusState = { key: "", message: "", error: false, done: false };
+let previewAudio = null;
+let previewObjectUrl = null;
+let previewing = false;
+const previewCache = new Map();
+
+function stopVoicePreview() {
+  if (previewAudio) {
+    previewAudio.pause();
+    previewAudio.removeAttribute("src");
+    previewAudio.load();
+    previewAudio = null;
+  }
+  if (previewObjectUrl) {
+    URL.revokeObjectURL(previewObjectUrl);
+    previewObjectUrl = null;
+  }
+}
+
+function setPreviewBusy(busy) {
+  previewing = busy;
+  els.previewVoice.classList.toggle("is-busy", busy);
+  els.previewVoice.disabled = busy;
+  const label = t(busy ? "previewVoiceBusy" : "previewVoice");
+  els.previewVoice.setAttribute("aria-label", label);
+  els.previewVoice.title = label;
+}
+
+async function previewSelectedVoice() {
+  if (previewing) return;
+
+  let apiKey;
+  try {
+    apiKey = requireApiKey();
+  } catch {
+    return;
+  }
+
+  const voice = els.voice.value;
+  const sample = t("voicePreviewSample");
+  const cacheKey = `${els.locale.value}:${voice}:${sample}`;
+
+  setPreviewBusy(true);
+  stopVoicePreview();
+
+  try {
+    let blob = previewCache.get(cacheKey);
+    if (!blob) {
+      blob = await synthesizeSpeech(apiKey, sample, voice);
+      previewCache.set(cacheKey, blob);
+    }
+    previewObjectUrl = URL.createObjectURL(blob);
+    previewAudio = new Audio(previewObjectUrl);
+    previewAudio.addEventListener("ended", () => {
+      stopVoicePreview();
+    });
+    await previewAudio.play();
+  } catch (error) {
+    console.error(error);
+    setStatus(error?.message || t("errGeneric"), { error: true, raw: true });
+  } finally {
+    setPreviewBusy(false);
+  }
+}
 
 function formatTime(seconds) {
   if (!Number.isFinite(seconds) || seconds < 0) return "0:00";
@@ -545,6 +609,9 @@ function refreshDynamicI18n() {
   } else {
     els.playPause.setAttribute("aria-label", t("play"));
   }
+  const previewLabel = t(previewing ? "previewVoiceBusy" : "previewVoice");
+  els.previewVoice.setAttribute("aria-label", previewLabel);
+  els.previewVoice.title = previewLabel;
 }
 
 async function loadSettings() {
@@ -787,7 +854,11 @@ els.resetPrompt.addEventListener("click", async () => {
 els.apiKey.addEventListener("input", scheduleSaveSettings);
 els.apiKey.addEventListener("change", () => void flushSettings());
 els.model.addEventListener("change", () => void flushSettings());
-els.voice.addEventListener("change", () => void flushSettings());
+els.voice.addEventListener("change", () => {
+  stopVoicePreview();
+  void flushSettings();
+});
+els.previewVoice.addEventListener("click", () => void previewSelectedVoice());
 els.prompt.addEventListener("input", () => {
   autosizePrompt();
   scheduleSaveSettings();

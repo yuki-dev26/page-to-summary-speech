@@ -17,10 +17,22 @@
   "background": {
     "service_worker": "background.js"
   },
+  "icons": {
+    "16": "icons/icon-16.png",
+    "32": "icons/icon-32.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
+  },
   "side_panel": {
     "default_path": "popup/popup.html"
   },
   "action": {
-    "default_title": "Page to Summary Speech"
+    "default_title": "Page to Summary Speech",
+    "default_icon": {
+      "16": "icons/icon-16.png",
+      "32": "icons/icon-32.png",
+      "48": "icons/icon-48.png",
+      "128": "icons/icon-128.png"
+    }
   }
 }

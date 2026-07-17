@@ -339,52 +339,35 @@ html[data-theme="dark"] .theme-option[aria-pressed="true"] {
 .brand-glyph {
   width: 44px;
   height: 44px;
+  flex-shrink: 0;
   border-radius: 14px;
   display: grid;
   place-items: center;
-  background: linear-gradient(
-    145deg,
-    rgba(255, 255, 255, 0.85),
-    rgba(180, 220, 255, 0.45)
-  );
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.7);
   border: 1px solid rgba(255, 255, 255, 0.75);
   box-shadow:
     0 8px 18px rgba(0, 122, 255, 0.18),
     inset 0 1px 0 rgba(255, 255, 255, 0.9);
 }
 
+.brand-icon {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
 html[data-theme="dark"] .brand-glyph {
-  background: linear-gradient(
-    145deg,
-    rgba(77, 163, 255, 0.35),
-    rgba(20, 40, 70, 0.7)
-  );
+  background: rgba(20, 40, 70, 0.55);
   border-color: rgba(255, 255, 255, 0.16);
   box-shadow:
     0 8px 18px rgba(0, 0, 0, 0.35),
     inset 0 1px 0 rgba(255, 255, 255, 0.12);
 }
 
-html[data-theme="dark"] .glyph-wave {
-  border-color: #4da3ff;
-  border-left-color: transparent;
-  border-bottom-color: transparent;
-  box-shadow: 6px 0 0 -3.5px #7cbcff;
-}
-
 html[data-theme="dark"] .orb {
   opacity: 0.45;
-}
-
-.glyph-wave {
-  width: 20px;
-  height: 14px;
-  border-radius: 999px;
-  border: 2.5px solid #007aff;
-  border-left-color: transparent;
-  border-bottom-color: transparent;
-  transform: rotate(45deg);
-  box-shadow: 6px 0 0 -3.5px #5ab0ff;
 }
 
 .brand-mark {
@@ -491,17 +474,24 @@ html[data-theme="dark"] .orb {
   color: var(--primary);
 }
 
-.key-row {
+.key-row,
+.voice-row {
   display: grid;
   grid-template-columns: 1fr auto;
   gap: 8px;
   align-items: stretch;
 }
 
-.key-row .icon-btn {
+.key-row .icon-btn,
+.voice-row .icon-btn {
   align-self: stretch;
   height: auto;
   min-height: 40px;
+}
+
+.voice-row .icon-btn.is-busy {
+  opacity: 0.55;
+  pointer-events: none;
 }
 
 input,
@@ -828,7 +818,8 @@ button:disabled {
 
 .icon-btn[aria-pressed="false"] .icon-eye,
 .icon-btn:not([aria-pressed]) .icon-eye,
-.icon-btn[aria-pressed="true"] .icon-eye-off {
+.icon-btn[aria-pressed="true"] .icon-eye-off,
+.icon-btn .icon-preview {
   display: block;
 }
 

@@ -19,7 +19,13 @@
       <header class="brand glass-card brand-card">
         <div class="brand-row">
           <div class="brand-glyph" aria-hidden="true">
-            <span class="glyph-wave"></span>
+            <img
+              class="brand-icon"
+              src="../icons/icon-128.png"
+              width="44"
+              height="44"
+              alt=""
+            />
           </div>
           <div class="brand-text">
             <p class="brand-mark">Page to Summary Speech</p>
@@ -308,27 +314,55 @@
               </span>
             </label>
 
-            <label class="field">
+            <div class="field">
               <span class="field-label" data-i18n="voice">話者</span>
-              <span class="select-wrap" data-custom-select>
-                <select id="voice">
-                  <option value="coral">Coral</option>
-                  <option value="marin">Marin</option>
-                  <option value="cedar">Cedar</option>
-                  <option value="nova">Nova</option>
-                  <option value="alloy">Alloy</option>
-                  <option value="ash">Ash</option>
-                  <option value="ballad">Ballad</option>
-                  <option value="echo">Echo</option>
-                  <option value="fable">Fable</option>
-                  <option value="onyx">Onyx</option>
-                  <option value="sage">Sage</option>
-                  <option value="shimmer">Shimmer</option>
-                  <option value="verse">Verse</option>
-                </select>
-                <span class="chevron" aria-hidden="true"></span>
-              </span>
-            </label>
+              <div class="voice-row">
+                <span class="select-wrap" data-custom-select>
+                  <select id="voice">
+                    <option value="coral">Coral</option>
+                    <option value="marin">Marin</option>
+                    <option value="cedar">Cedar</option>
+                    <option value="nova">Nova</option>
+                    <option value="alloy">Alloy</option>
+                    <option value="ash">Ash</option>
+                    <option value="ballad">Ballad</option>
+                    <option value="echo">Echo</option>
+                    <option value="fable">Fable</option>
+                    <option value="onyx">Onyx</option>
+                    <option value="sage">Sage</option>
+                    <option value="shimmer">Shimmer</option>
+                    <option value="verse">Verse</option>
+                  </select>
+                  <span class="chevron" aria-hidden="true"></span>
+                </span>
+                <button
+                  id="previewVoice"
+                  type="button"
+                  class="icon-btn"
+                  data-i18n-aria-label="previewVoice"
+                  data-i18n-title="previewVoice"
+                  aria-label="試聴"
+                  title="試聴"
+                >
+                  <svg
+                    class="icon-preview"
+                    viewBox="0 0 24 24"
+                    width="18"
+                    height="18"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.75"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="M11 5L6 9H3v6h3l5 4V5z" />
+                    <path d="M15.5 8.5a5 5 0 0 1 0 7" />
+                    <path d="M18.5 5.5a9 9 0 0 1 0 13" />
+                  </svg>
+                </button>
+              </div>
+            </div>
 
             <div class="field">
               <div class="field-label-row">
