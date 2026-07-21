@@ -1,5 +1,7 @@
 # Page to Summary Speech
 
+<img width="1280" height="670" alt="image" src="https://github.com/user-attachments/assets/b3402dcb-e169-43a5-91a6-c5f643434226" />
+
 閲覧中のWebページをAIで要約し、その要約を音声で読み上げるブラウザ拡張機能です。
 
 ## 基本フロー
