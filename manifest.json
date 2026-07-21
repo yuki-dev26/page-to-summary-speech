@@ -1,8 +1,10 @@
 {
   "manifest_version": 3,
-  "name": "Page to Summary Speech",
-  "description": "閲覧中のWebページをAIで要約し、音声で読み上げます",
+  "name": "__MSG_extName__",
+  "description": "__MSG_extDescription__",
+  "default_locale": "ja",
   "version": "1.0.0",
+  "minimum_chrome_version": "116",
   "permissions": [
     "tabs",
     "storage",
@@ -10,9 +12,11 @@
     "sidePanel"
   ],
   "host_permissions": [
-    "http://*/*",
-    "https://*/*",
     "https://api.openai.com/*"
+  ],
+  "optional_host_permissions": [
+    "http://*/*",
+    "https://*/*"
   ],
   "background": {
     "service_worker": "background.js"
@@ -27,7 +31,7 @@
     "default_path": "popup/popup.html"
   },
   "action": {
-    "default_title": "Page to Summary Speech",
+    "default_title": "__MSG_extName__",
     "default_icon": {
       "16": "icons/icon-16.png",
       "32": "icons/icon-32.png",

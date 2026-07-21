@@ -1,0 +1,10 @@
+{
+  "extName": {
+    "message": "Page to Summary Speech",
+    "description": "Extension name shown in Chrome and the Web Store"
+  },
+  "extDescription": {
+    "message": "用 AI 总结当前网页并用语音朗读",
+    "description": "Short description for Chrome Web Store listing"
+  }
+}

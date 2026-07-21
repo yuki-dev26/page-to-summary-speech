@@ -708,6 +708,16 @@ function isRestrictedUrl(url) {
   return !url || !/^https?:/i.test(url);
 }
 
+function originPatternFromUrl(url) {
+  try {
+    const { origin, protocol } = new URL(url);
+    if (protocol !== "http:" && protocol !== "https:") return null;
+    return `${origin}/*`;
+  } catch {
+    return null;
+  }
+}
+
 async function getActiveTab() {
   const tabs = await chrome.tabs.query({
     active: true,
@@ -729,6 +739,33 @@ async function getActiveTab() {
   }
 
   return tab;
+}
+
+/** Side panel clicks do not grant activeTab; request host access per origin. */
+async function ensurePageAccess(url) {
+  const originPattern = originPatternFromUrl(url);
+  if (!originPattern) {
+    throw new Error(t("errRestrictedUrl"));
+  }
+
+  const already = await chrome.permissions.contains({
+    origins: [originPattern],
+  });
+  if (already) return;
+
+  let granted = false;
+  try {
+    granted = await chrome.permissions.request({
+      origins: [originPattern],
+    });
+  } catch (error) {
+    console.error(error);
+    throw new Error(t("errPermissionDenied"));
+  }
+
+  if (!granted) {
+    throw new Error(t("errPermissionDenied"));
+  }
 }
 
 async function extractFromTab(tabId) {
@@ -767,12 +804,13 @@ async function run() {
   setPlayerBadge("badgeBusy", "busy");
 
   try {
-    await saveSettings();
     showProgress();
     setStatus("");
 
     setStep("extract", "active");
     const tab = await getActiveTab();
+    await ensurePageAccess(tab.url);
+    await saveSettings();
     const page = await extractFromTab(tab.id);
 
     setStep("extract", "done");
