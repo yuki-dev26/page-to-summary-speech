@@ -37,10 +37,10 @@
 
 | 用途     | API                                | モデル                                                                 |
 | -------- | ---------------------------------- | ---------------------------------------------------------------------- |
-| 要約     | Responses API (`/v1/responses`)    | `gpt-5.6-sol` / `gpt-5.6-terra` / `gpt-5.6-luna`（既定: Luna）         |
+| 要約     | Responses API (`/v1/responses`)    | `gpt-5.4-nano` / `gpt-5.4-mini` / `gpt-5.4`（既定: nano）              |
 | 音声合成 | Speech API (`/v1/audio/speech`)    | `gpt-4o-mini-tts`                                                      |
 
-要約モデルはサイドパネルで切り替えできます（Sol / Terra / Luna）。
+要約モデルはサイドパネルで切り替えできます（nano / mini / GPT-5.4）。
 TTS はOpenAI APIの `gpt-4o-mini-tts` を使います。
 
 ## 構成
