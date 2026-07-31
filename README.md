@@ -64,15 +64,9 @@ lib/locales/           # 言語別メッセージ (ja/en/zh-CN/zh-TW/ko)
 - ページ構造によっては本文抽出が不十分な場合があります
 - OpenAI API の利用料はご自身のアカウントに課金されます
 
-## Supporters
-
-[![note メンバーシップ](https://img.shields.io/badge/note-Membership-41C9B4?style=for-the-badge&logo=note&logoColor=white)](https://note.com/yuki_tech/membership/members)
-
 ## License
 
 Copyright (c) 2026 [yuki-P](https://x.com/yuki_p02)  
-Licensed under the [Membership Source Code License](LICENSE).
+Licensed under the [MIT License](LICENSE).
 
-メンバーシップ限定のソースコードライセンスです。個人・教育など非商用での閲覧・実行・改変は許可されますが、再配布・商用利用などは著作権者の事前の許諾が必要です。詳細は [LICENSE](LICENSE) を参照してください。
-
-[![License: Custom](https://img.shields.io/badge/License-Custom-lightgrey.svg)](LICENSE)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
